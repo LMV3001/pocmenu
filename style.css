@@ -1,16 +1,27 @@
 
 body {
   margin: 0;
-  min-height: 220vh;
+  min-height: 300vh;
   background: #f5f7fb;
   
 }
 
-svg {
-  position : fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) translateX(0px) rotate(0deg);
+.hexagone {
+  position: fixed;
+  transform: translateX(0px) rotate(0deg);
+  transform-origin: center;
+  transform-box: fill-box;
+}
+  
+
+html {
+  scrollbar-width: none;
+  scroll-behavior: smooth;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
 }
 
 
