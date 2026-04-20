@@ -6,39 +6,12 @@ body {
   
 }
 
-.octogone{
-  --oct-fill: #3498db;
-  --oct-border: #2980b9;
-  --oct-border-width: 4px;
-
-  position: fixed;
+svg {
+  position : fixed;
   top: 50%;
   left: 50%;
-  width: 220px;
-  height: 220px;
-  background-color: var(--oct-border);
-  clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);
-  -webkit-clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);
   transform: translate(-50%, -50%) translateX(0px) rotate(0deg);
-  transition: transform 220ms ease-out;
-  will-change: transform;
-}
-
-.octogone.is-animating {
-  transition: none;
 }
 
 
-
-
-
-/*.octogone-p1::before {
-  content: "";
-  position: absolute;
-  inset: var(--oct-border-width);
-  background-color: var(--oct-fill);
-  clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);
-  -webkit-clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);
-  transform: rotate(45deg);
-}
 

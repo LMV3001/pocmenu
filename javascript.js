@@ -1,4 +1,4 @@
-const octogone = document.getElementById("1");
+const octogone = document.getElementById("2");
 
 let rafId = null;
 let currentAngle = 0;
