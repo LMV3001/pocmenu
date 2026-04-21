@@ -86,6 +86,10 @@ let borneInf = [];
 let borneSup = [];
 let dureeAnimation = [];
 let rafId = null;
+
+// Offset aléatoire fixe par hexagone (généré une seule fois) pour varier les déclenchements.
+const aleaParHexagone = Array.from({ length: nombreHexagones }, () => (Math.random() - 0.5) * 2); // entre -1 et 1
+const amplitudeAlea = 0.3; // fraction du spanDepart utilisée pour l'aléatoire
 const rotationActuelle = hexagones.map(() => 0);
 const translationActuelle = hexagones.map(() => 0);
 
@@ -112,7 +116,9 @@ function recalculerTimeline() {
 
   borneInf = hexagones.map((_, index) => {
     const t = indexInverse[index] / denominateur;
-    return courbeDelai(t) * spanDepart;
+    const base = courbeDelai(t) * spanDepart;
+    const offset = aleaParHexagone[index] * amplitudeAlea * spanDepart;
+    return Math.max(0, base + offset);
   });
 
   borneSup = hexagones.map((_, index) => borneInf[index] + dureeParHexagone); // fin de l'animation pour cet hexagone selon sa position dans la liste
