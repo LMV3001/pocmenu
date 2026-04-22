@@ -4,7 +4,7 @@ const ctx = canvas.getContext("2d");
 
 // Parametres de la grille hexagonale.
 // On garde x lignes fixes, puis on calcule automatiquement le nombre de colonnes.
-const NOMBRE_LIGNES = 100;
+const NOMBRE_LIGNES = 30;
 const DECALAGE_GAUCHE = -20;
 const DECALAGE_HAUTEUR = -20;
 const CHEVAUCHEMENT_X = 0.6; // évite les fentes visuelles dues au rendu sous-pixel des SVG.
@@ -16,7 +16,7 @@ const TYPE_COURBE_DELAI = "easeOut";
 const FORCE_COURBE_DELAI = 1.8;
 const ETALEMENT_DELAI_EN_VH = 2; // Combien de viewport height pour etaler les delais de depart des hexagones.
 const AMPLITUDE_ALEA = 0.3; // amplitude de l'alea de placement des delais de depart (en proportion du span d'etalement), pour casser le cote trop mecanique.
-const ECHELLE_TAILLE_HEXAGONES = 0.25;// Taille de l'hexagone à la création 1 = taille normale, <1 = hexagones plus petits, >1 = hexagones plus grands.
+const ECHELLE_TAILLE_HEXAGONES = 1;// Taille de l'hexagone à la création 1 = taille normale, <1 = hexagones plus petits, >1 = hexagones plus grands.
 const TAUX_HEXAGONES_TRANSPARENTS = 0.0;
 const TAUX_REDUCTION_HEXAGONES_ANIMATION = 0; // 0.75 = 75% de reduction (taille finale = 25%).
 const COULEUR_HEXAGONES = "#3498db";
@@ -24,6 +24,7 @@ const COULEUR_BORD_HEXAGONES = "#2980b9";
 const COULEUR_FINAL_HEXAGONES = "#2ecc71";
 const COULEUR_FINAL_BORD_HEXAGONES = "#27ae60";
 // Donnees d'etat mises a jour au chargement et au resize.
+
 let hexagones = [];
 let borneInf = [];
 let dureeParHexagone = window.innerHeight * 2;
@@ -31,9 +32,28 @@ let inverseDureeParHexagone = 1 / Math.max(1, dureeParHexagone);
 let rafId = null;
 let layout = null;
 
+// Survol souris : index de l'hexagone survolé ou null
+let indexHexagoneSurvole = null;
+// Pour chaque hexagone, temps de survol (timestamp ou null)
+let survolTimestamps = [];
+const DUREE_TRANSITION_SURVOL = 200; // ms
+
+// Couleur de survol
+const COULEUR_SURVOL_HEXAGONE = "#e74c3c";
+const COULEUR_SURVOL_HEXAGONE_RGB = hexVersRgb(COULEUR_SURVOL_HEXAGONE);
+
 // Utilitaire simple: garde une valeur entre min et max.
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
+}
+
+function obtenirTailleViewport() {
+  const vw = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+  const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  return {
+    width: Math.round(vw),
+    height: Math.round(vh),
+  };
 }
 
 // Convertit une couleur hex en objet {r, g, b} pour faciliter les calculs de melange de couleurs.
@@ -165,6 +185,9 @@ function initialiserHexagones() {
     };
   }
 
+  // Init des timestamps de survol
+  survolTimestamps = new Array(layout.nombreHexagones).fill(null);
+
   // Quand la grille change, la timeline doit etre recalculee.
   recalculerTimeline();
 }
@@ -205,10 +228,11 @@ function recalculerTimeline() {
 
 function resizeCanvas() {
   const dpr = window.devicePixelRatio || 1; // dpr -> device pixel ratio pour les ecrans retina et autres.
-  canvas.width = Math.floor(window.innerWidth * dpr);
-  canvas.height = Math.floor(window.innerHeight * dpr);
-  canvas.style.width = `${window.innerWidth}px`;
-  canvas.style.height = `${window.innerHeight}px`;
+  const viewport = obtenirTailleViewport();
+  canvas.width = Math.floor(viewport.width * dpr);
+  canvas.height = Math.floor(viewport.height * dpr);
+  canvas.style.width = `${viewport.width}px`;
+  canvas.style.height = `${viewport.height}px`;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
@@ -241,6 +265,7 @@ function dessinerHexagone(cx, cy, rayon, rotation, echelle, estTransparent, coul
 function renderFromScroll() {
   const scrollY = window.scrollY;
   ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+  const now = performance.now();
 
   for (let i = 0; i < hexagones.length; i++) {
     const hex = hexagones[i];
@@ -261,12 +286,44 @@ function renderFromScroll() {
     const echelle = clamp(1 - progressionEaseOut * TAUX_REDUCTION_HEXAGONES_ANIMATION, 0.05, 1);
     // Transition de couleur volontairement accentuée pour etre visible tres vite.
     const progressionCouleur = clamp(progressionEaseOut * 1.4, 0, 1);
-    const couleurFond = rgbVersCss(
+    let couleurFond = rgbVersCss(
       melangerCouleursRgb(COULEUR_HEXAGONES_RGB, COULEUR_FINAL_HEXAGONES_RGB, progressionCouleur),
     );
-    const couleurBord = rgbVersCss(
+    let couleurBord = rgbVersCss(
       melangerCouleursRgb(COULEUR_BORD_HEXAGONES_RGB, COULEUR_FINAL_BORD_HEXAGONES_RGB, progressionCouleur),
     );
+
+    // Transition douce sur le survol
+    let tSurvol = 0;
+    if (indexHexagoneSurvole === i) {
+      // Si survolé, on démarre ou continue la transition
+      if (!survolTimestamps[i]) {
+        survolTimestamps[i] = now;
+      }
+      tSurvol = clamp((now - survolTimestamps[i]) / DUREE_TRANSITION_SURVOL, 0, 1);
+    } else {
+      // Si plus survolé, on reset la transition
+      survolTimestamps[i] = null;
+    }
+    if (tSurvol > 0) {
+      // Interpolation douce vers la couleur finale d'animation
+      couleurFond = rgbVersCss(
+        melangerCouleursRgb(
+          melangerCouleursRgb(COULEUR_HEXAGONES_RGB, COULEUR_FINAL_HEXAGONES_RGB, progressionCouleur),
+          COULEUR_FINAL_HEXAGONES_RGB,
+          tSurvol
+        )
+      );
+      couleurBord = rgbVersCss(
+        melangerCouleursRgb(
+          melangerCouleursRgb(COULEUR_BORD_HEXAGONES_RGB, COULEUR_FINAL_BORD_HEXAGONES_RGB, progressionCouleur),
+          COULEUR_FINAL_BORD_HEXAGONES_RGB,
+          tSurvol
+        )
+      );
+      // Redessiner tant que la transition n'est pas terminée
+      if (tSurvol < 1) rafId = null;
+    }
 
     // Position finale du centre apres transformation.
     const cx = hex.centerX + translationX;
@@ -282,6 +339,15 @@ function renderFromScroll() {
       couleurFond,
       couleurBord,
     );
+  }
+
+  // Si une transition est en cours, continuer à animer
+  if (indexHexagoneSurvole !== null && survolTimestamps[indexHexagoneSurvole]) {
+    const tSurvol = clamp((now - survolTimestamps[indexHexagoneSurvole]) / DUREE_TRANSITION_SURVOL, 0, 1);
+    if (tSurvol < 1) {
+      rafId = null;
+      scheduleRender();
+    }
   }
 
   rafId = null;
@@ -309,6 +375,43 @@ window.addEventListener("resize", () => {
   resizeCanvas();
   initialiserHexagones();
   renderFromScroll();
+});
+
+
+// Détecte l'hexagone sous la souris (coordonnées relatives au canvas)
+function trouverHexagoneSousSouris(x, y) {
+  // Les coordonnées x, y sont déjà dans le repère du canvas (après getBoundingClientRect)
+  for (let i = 0; i < hexagones.length; i++) {
+    const hex = hexagones[i];
+    // On reprend la logique de position finale (sans animation)
+    const cx = hex.centerX;
+    const cy = hex.centerY;
+    const dx = x - cx;
+    const dy = y - cy;
+    // Test simple: cercle inscrit
+    if (Math.sqrt(dx * dx + dy * dy) <= layout.rayon) {
+      return i;
+    }
+  }
+  return null;
+}
+
+canvas.addEventListener("mousemove", (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const idx = trouverHexagoneSousSouris(x, y);
+  if (idx !== indexHexagoneSurvole) {
+    indexHexagoneSurvole = idx;
+    scheduleRender();
+  }
+});
+
+canvas.addEventListener("mouseleave", () => {
+  if (indexHexagoneSurvole !== null) {
+    indexHexagoneSurvole = null;
+    scheduleRender();
+  }
 });
 
 // Demarre l'application.
