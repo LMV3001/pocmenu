@@ -8,9 +8,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
       - name: Login to GitHub Container Registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+        
       - name: Build and Push
         run: |
-          docker build -t ghcr.io/${{ github.repository_owner }}/mon-site:latest .
-          docker push ghcr.io/${{ github.repository_owner }}/mon-site:latest
+          # On force le nom en minuscules ici
+          docker build -t ghcr.io/lmv3001/mon-site:latest .
+          docker push ghcr.io/lmv3001/mon-site:latest
