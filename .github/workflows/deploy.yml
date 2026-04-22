@@ -1,19 +1,26 @@
 name: Build and Push Image
+
 on:
   push:
     branches: [ main ]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-lates
+    permissions:
+      contents: read
+      packages: write
+    # -------------------------
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
       
       - name: Login to GitHub Container Registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
         
       - name: Build and Push
         run: |
-          # On force le nom en minuscules ici
+          # Construction de l'image
           docker build -t ghcr.io/lmv3001/pocmenu:latest .
+          # Envoi vers le registre
           docker push ghcr.io/lmv3001/pocmenu:latest
