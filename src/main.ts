@@ -48,8 +48,8 @@ let indexHexagoneSurvole: number | null = null;
 let survolTimestamps: (number | null)[] = [];
 const DUREE_TRANSITION_SURVOL = 200;
 
-const COULEUR_SURVOL_HEXAGONE = "#e74c3c";
-const COULEUR_SURVOL_HEXAGONE_RGB = hexVersRgb(COULEUR_SURVOL_HEXAGONE);
+// const COULEUR_SURVOL_HEXAGONE = "#e74c3c";
+// const COULEUR_SURVOL_HEXAGONE_RGB = hexVersRgb(COULEUR_SURVOL_HEXAGONE);
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));

@@ -18,6 +18,8 @@ const COULEUR_HEXAGONES: string = import.meta.env.VITE_COULEUR_HEXAGONES;
 const COULEUR_BORD_HEXAGONES: string = import.meta.env.VITE_COULEUR_BORD_HEXAGONES;
 const COULEUR_FINAL_HEXAGONES: string = import.meta.env.VITE_COULEUR_FINAL_HEXAGONES;
 const COULEUR_FINAL_BORD_HEXAGONES: string = import.meta.env.VITE_COULEUR_FINAL_BORD_HEXAGONES;
+// const COULEUR_SURVOL_HEXAGONE = "#e74c3c";
+// const COULEUR_SURVOL_HEXAGONE_RGB = hexVersRgb(COULEUR_SURVOL_HEXAGONE);Z
 
 // Canvas principal et contexte 2D: tout le dessin passe par cet objet ctx.
 const canvas = document.getElementById("scene") as HTMLCanvasElement;
@@ -47,9 +49,7 @@ let indexHexagoneSurvole: number | null = null;
 let survolTimestamps: (number | null)[] = [];
 const DUREE_TRANSITION_SURVOL = 200;
 
-const COULEUR_SURVOL_HEXAGONE = "#e74c3c";
-const COULEUR_SURVOL_HEXAGONE_RGB = hexVersRgb(COULEUR_SURVOL_HEXAGONE);
-
+// fonction utilitaire pour limiter une valeur entre un minimum et un maximum
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
@@ -314,13 +314,13 @@ function renderFromScroll(): void {
       couleurBord,
     );
   }
-  if (indexHexagoneSurvole !== null && survolTimestamps[indexHexagoneSurvole]) {
+  /*if (indexHexagoneSurvole !== null && survolTimestamps[indexHexagoneSurvole]) {
     const tSurvol = clamp((now - survolTimestamps[indexHexagoneSurvole]!) / DUREE_TRANSITION_SURVOL, 0, 1);
     if (tSurvol < 1) {
       rafId = null;
       scheduleRender();
     }
-  }
+  }*/
   rafId = null;
 }
 
