@@ -2,7 +2,7 @@ html,
 body {
   margin: 0;
   padding: 0;
-  min-height: 300vh;
+  min-height: 400dvh;
   background: #f5f7fb;
   scrollbar-width: none;
   -ms-overflow-style: none;
