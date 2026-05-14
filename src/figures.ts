@@ -1,225 +1,207 @@
-export class Indices {
-    colonne : number;
-    ligne : number;
 
-    constructor(colonne: number, ligne: number) {
-        this.colonne = colonne;
-        this.ligne = ligne;
-    }
-    
-}
+import { Indices } from "./indices";
+import { clamp } from "./utils";
+import { Point } from './point';
 
 export abstract class Figures {
   protected readonly largeur : number;
   protected readonly hauteur : number;
-  protected readonly xInitial: number;
-  protected readonly yInitial: number;
-  protected readonly xCible: number;
-  protected readonly yCible: number;
-  protected readonly RotationCible: number;
+  protected readonly pointInitial : Point; // à utiliser pour une animation de profondeur éventuelle
+  protected readonly symetrieAxiale: number; // 1 pour les figures régulières et -1 pour les figures inversées
+  protected readonly pointCible: Point;
+  protected readonly rotationInitiale: Point; // Rotation de départ pour l'animation
+  protected readonly rotationCible: Point; // Rotation cible pour l'animation
   protected readonly facteurAleatoire: number; // une génération aléatoire optimisée performance devra être trouvée
   protected readonly reductionCible : number;
-  protected readonly couleurFillInitiale: string; 
-  protected readonly couleurStrokeInitiale: string; 
-  protected readonly couleurFillFinale: string; 
-  protected readonly couleurStrokeFinale: string; 
+  protected readonly couleurInitiale: {h: number, s: number, l: number}; 
+  //protected readonly couleurStrokeInitiale: string; 
+  protected readonly couleurFinale: {h: number, s: number, l: number}; 
+  //protected readonly couleurStrokeFinale: string; 
   protected readonly indice : Indices;
   protected readonly colonneImpaire: number ; 
   protected readonly ligneImpaire: number ; // Temps écoulé depuis le début de l'animation, à utiliser pour les calculs d'animation
 
-  constructor(largeur : number, hauteur : number, xInitial: number, yInitial: number, xCible: number, yCible: number, indice : Indices) {
+  constructor(largeur : number, hauteur : number, pointInitial: Point, pointCible: Point, indice : Indices, symetrieAxiale: number) {
     this.largeur = largeur;
     this.hauteur = hauteur;
-    this.xInitial = xInitial;
-    this.yInitial = yInitial;
-    this.xCible = xCible;
-    this.yCible = yCible;
+    this.pointInitial = pointInitial;
+    this.pointCible = pointCible;
     this.indice = indice;
     this.colonneImpaire = this.indice.colonne % 2 === 0 ? 0 : 1; // Alternance de la hauteur pour créer un effet de grille
     this.ligneImpaire = this.indice.ligne % 2 === 0 ? 0 : 1; // Alternance de la hauteur pour créer un effet de grille
+    this.symetrieAxiale = symetrieAxiale; // 1 pour les figures régulières et -1 pour les figures inversées
     this.facteurAleatoire = 0.5 + Math.random();
-    this.RotationCible = 2 * Math.PI; 
+    this.rotationInitiale = new Point(0, 0, 0); // Rotation de départ pour l'animation
+    this.rotationCible = new Point(2 * Math.PI, 2 * Math.PI, 2 * Math.PI); // Rotation cible pour l'animation
     this.reductionCible = 1; 
-    this.couleurFillInitiale = '';
-    this.couleurStrokeInitiale = '';
-    this.couleurFillFinale = '';
-    this.couleurStrokeFinale = '';
+    this.couleurInitialePaire = {h:210, s:15, l:85}; //hsl -> plus sombre que la couleur finale pour un effet de révélation
+    this.couleurFinalePaire = {h:210, s:15, l:85}; //hsl -> plus clair que la couleur initiale pour un effet de révélation
+    this.couleurInitialeImpaire ={h:180, s:20, l:65}; //hsl -> plus sombre que la couleur finale pour un effet de révélation
+    this.couleurFinaleImpaire = {h:180, s:20, l:65}; //hsl -> plus clair que la couleur initiale pour un effet de révélation
+    
+    //this.couleurStrokeInitiale = '';
+    //this.couleurStrokeFinale = '';
   }
 
-  public calculerProgression(ctx : CanvasRenderingContext2D, ScrollActuelle: number, tempsEcoule: number): void {
+  public calculerProgression(ctx : CanvasRenderingContext2D, ScrollActuelle: number, tempsEcoule: number, canvasWidth: number, canvasHeight: number): void {
     
-    const startX = this.xInitial + (ScrollActuelle * this.facteurAleatoire);
-    const startY = this.yInitial + (ScrollActuelle * this.facteurAleatoire);
-   
-    const easeOut = 1 - Math.pow(1 - tempsEcoule, 3);
+    const startX = this.pointInitial.x + (ScrollActuelle * this.facteurAleatoire);
+    const startY = this.pointInitial.y + (ScrollActuelle * this.facteurAleatoire);
+    const startZ = this.pointInitial.z + (ScrollActuelle * this.facteurAleatoire);
+    const couleurActuelle = '';
+    const durée = 500; // Durée de l'animation en millisecondes
+    const rotation = new Point(0, 0, 0);
+    const facteurDelai = 0.8;
+    const delai = (canvasWidth - this.pointInitial.x) * facteurDelai;
+    const duréeAnimation = 500;
+    let t = clamp((ScrollActuelle - delai) / duréeAnimation, 0, 1);
+    const easeOut = Math.pow(t, 2)*(3-2*t); 
+    const easeOutColor = Math.sqrt(easeOut);
 
-    const x = startX + (this.xCible - startX) * easeOut;
-    const y = startY + (this.yCible - startY) * easeOut;
+    // Interpolation linéaire de la rotation en fonction du temps écoulé
+
+    const rotationX = this.rotationInitiale.x + (this.rotationCible.x - this.rotationInitiale.x) * ScrollActuelle / durée;
+    const rotationY = this.rotationInitiale.y + (this.rotationCible.y - this.rotationInitiale.y) * ScrollActuelle / durée;
+    const rotationZ = this.rotationInitiale.z + (this.rotationCible.z - this.rotationInitiale.z) * ScrollActuelle / durée;
+    rotation.x = rotationX*(this.facteurAleatoire-0.5)*2; // Rotation aléatoire pour chaque figure
+    rotation.y = rotationY*(this.facteurAleatoire-0.5)*2;
+    rotation.z = rotationZ*(this.facteurAleatoire-0.5)*2;
+   
+   // Interpolation linéaire de la couleur en fonction du temps écoulé
+    const couleurIntermediairePaire = {
+      h: this.couleurInitialePaire.h + (this.couleurFinalePaire.h - this.couleurInitialePaire.h) * easeOutColor,
+      s: this.couleurInitialePaire.s + (this.couleurFinalePaire.s - this.couleurInitialePaire.s) * easeOutColor,
+      l: this.couleurInitialePaire.l + (this.couleurFinalePaire.l - this.couleurInitialePaire.l) * easeOutColor
+    };
+    const couleurIntermediaireImpaire = {
+      h: this.couleurInitialeImpaire.h + (this.couleurFinaleImpaire.h - this.couleurInitialeImpaire.h) * easeOutColor,
+      s: this.couleurInitialeImpaire.s + (this.couleurFinaleImpaire.s - this.couleurInitialeImpaire.s) * easeOutColor,
+      l: this.couleurInitialeImpaire.l + (this.couleurFinaleImpaire.l - this.couleurInitialeImpaire.l) * easeOutColor
+    };
+    const couleurIntermediaire = this.indice.colonne % 2 === 0 ? couleurIntermediairePaire : couleurIntermediaireImpaire;
     
-    this.dessiner(ctx, x, y); // Pass the index value
+    // Interpolation linéaire des points en fonction du temps écoulé
+
+    const x = startX + (this.pointCible.x - startX) * easeOut;
+    const y = startY + (this.pointCible.y - startY) * easeOut;
+    const z = Math.max(startZ + (this.pointCible.z - startZ) * easeOut, this.hauteur*2); // Assure que z ne devient pas négatif
+    const pointIntermediaire = new Point(x, y, z);
+    
+    // Application de la rotation interpolée en fonction de tempsEcoule
+    const angle = this.RotationCible * easeOut;
+    
+    // Dessin de la figure avec la couleur intermédiaire  
+
+    this.dessiner(ctx, pointIntermediaire, rotation, couleurIntermediaire); // Dessine la figure avec la couleur intermédiaire
+
   }
  
-  protected abstract dessiner(ctx : CanvasRenderingContext2D, x: number, y: number): void;
+  protected abstract dessiner(ctx : CanvasRenderingContext2D, pointInitial: Point, rotation: Point, couleur: {h: number, s: number, l: number}): void;
   
-}
 
-export class Losange extends Figures{
-
-  protected dessiner (ctx : CanvasRenderingContext2D, x: number, y: number): void {
-    
-    ctx.beginPath();// supprimer après test
-    ctx.moveTo(x, y +(this.colonneImpaire * -this.hauteur/2)); // Point haut du losange
-    ctx.lineTo(x - this.largeur/2, y + this.hauteur/2 * (1 - this.colonneImpaire));
-    ctx.lineTo(x, y + this.hauteur * (1 - this.colonneImpaire/2)); // Point bas du losange
-    ctx.lineTo(x + this.largeur/2, y + this.hauteur/2 * (1 - this.colonneImpaire));
-    ctx.fillStyle = this.colonneImpaire ? "#3498db" : "#2ecc71"; // Couleur de remplissage basée sur la parité
-    ctx.fill(); // supprimer après test
-    ctx.closePath(); 
-  }
 }
 
 export class Triangle extends Figures {
  
-  protected dessiner (ctx : CanvasRenderingContext2D, x: number, y: number): void {
-    ctx.beginPath(); // supprimer après test
-    ctx.moveTo(x, y + (this.colonneImpaire * this.hauteur)); // Point de départ du triangle
-    ctx.lineTo(x - this.largeur/2, y+this.hauteur*(1 - this.colonneImpaire)); // Point gauche du triangle
-    ctx.lineTo(x + this.largeur/2, y+this.hauteur*(1 - this.colonneImpaire)); // Point droit du triangle
-    ctx.fillStyle = this.colonneImpaire ? "#3498db" : "#2ecc71"; // supprimer après test
-    ctx.fill(); // supprimer après test
-    ctx.closePath(); 
- 
-  }
+  protected dessiner (ctx : CanvasRenderingContext2D, pointInitial: Point, rotation: Point, couleur: {h: number, s: number, l: number}): void { 
+    const x = pointInitial.x;
+    const y = pointInitial.y;
+    const z = pointInitial.z;
+    console.log("Dessin du triangle à la position, x :", x, "y :", y, "z :", z);
+    const rotationX = rotation.x;
+    const rotationY = rotation.y;
+    const rotationZ = rotation.z;
+    const focale = 600; // Distance focale pour la projection 3D
+    const canvasWidth = ctx.canvas.width;
+    const canvasHeight = ctx.canvas.height;
+    // Le sommet est inversé selon la symétrie axiale
+    const sommet : Point = new Point(x, y - this.hauteur/2 * this.symetrieAxiale, z);
+    const BaseDevantGauche : Point = new Point(x - this.largeur/2, y + this.hauteur/2*this.symetrieAxiale, z-this.hauteur/2); // Inclinaison en fonction de la rotation sur l'axe X
+    const BaseDevantDroite : Point = new Point(x + this.largeur/2, y + this.hauteur/2*this.symetrieAxiale, z-this.hauteur/2); // Inclinaison en fonction de la rotation sur l'axe X
+    const BaseDerriereGauche : Point = new Point(x - this.largeur/2, y + this.hauteur/2*this.symetrieAxiale, z+this.hauteur/2); // Inclinaison en fonction de la rotation sur l'axe X
+    const BaseDerriereDroite : Point = new Point(x + this.largeur/2, y + this.hauteur/2*this.symetrieAxiale, z+this.hauteur/2); // Inclinaison en fonction de la rotation sur l'axe X
 
-}
+    // Apply rotation to 3D points before projecting to 2D
+    sommet.rotateX(rotationX);
+    sommet.rotateY(rotationY);
+    sommet.rotateZ(rotationZ);
+    BaseDevantGauche.rotateX(rotationX);
+    BaseDevantGauche.rotateY(rotationY);
+    BaseDevantGauche.rotateZ(rotationZ);
+    BaseDevantDroite.rotateX(rotationX);
+    BaseDevantDroite.rotateY(rotationY);
+    BaseDevantDroite.rotateZ(rotationZ);
+    BaseDerriereGauche.rotateX(rotationX);
+    BaseDerriereGauche.rotateY(rotationY);
+    BaseDerriereGauche.rotateZ(rotationZ);
+    BaseDerriereDroite.rotateX(rotationX);
+    BaseDerriereDroite.rotateY(rotationY);
+    BaseDerriereDroite.rotateZ(rotationZ);
 
-export class Hexagone extends Figures {
+    const point2DSommet = sommet.to2D(focale, canvasWidth/2, canvasHeight/2);
+    const point2DBaseDevantGauche = BaseDevantGauche.to2D(focale, canvasWidth/2, canvasHeight/2);
+    const point2DBaseDevantDroite = BaseDevantDroite.to2D(focale, canvasWidth/2, canvasHeight/2);
+    const point2DBaseDerriereGauche = BaseDerriereGauche.to2D(focale, canvasWidth/2, canvasHeight/2);
+    const point2DBaseDerriereDroite = BaseDerriereDroite.to2D(focale, canvasWidth/2, canvasHeight/2);
 
-  private readonly rayon: number;
-
-  constructor(largeur : number, hauteur : number, xInitial: number, yInitial: number, xCible: number, yCible: number, indice : Indices) {
-    const rayon = largeur / 2; 
-    const espacementX = rayon * 1.5;
-    const espacementY = rayon * Math.sqrt(3);
-    const colonneImpaire = indice.colonne % 2 === 0 ? 0 : 1;
-
-    // Coordonnées idéales en nid d'abeille calculées AVANT l'instanciation du parent
-    const vraiX = indice.colonne * espacementX;
-    const vraiY = (indice.ligne * espacementY) + (colonneImpaire * (espacementY / 2));
-    
-    super(largeur, hauteur, vraiX, vraiY, xCible, yCible, indice);
-    this.rayon = rayon;
-  }
-  
-
-  protected dessiner (ctx : CanvasRenderingContext2D, x: number, y: number): void {
-    const angle: number = Math.PI / 3; // 60 degrés en radians
-    
-    ctx.beginPath();
-    for (let i = 0; i < 6; i++) {
-      const xOffset = this.rayon * Math.cos(i * angle);
-      const yOffset = this.rayon * Math.sin(i * angle);
-      if (i === 0) {
-        ctx.moveTo(x + xOffset, y + yOffset);
-      } else {
-        ctx.lineTo(x + xOffset, y + yOffset);
-      }
-    }
-    ctx.closePath(); // Clôture AVANT de dessiner la bordure (stroke)
-
-    ctx.fillStyle = this.colonneImpaire ? "#3498db" : "#2ecc71"; // supprimer après test
-    ctx.fill(); // supprimer après test
-    ctx.strokeStyle = this.colonneImpaire ? "#2980b9" : "#27ae60"; // supprimer après test
-    ctx.stroke(); // supprimer après test
-  } 
-}
-
-export class Octogone extends Figures {
-
-  private readonly rayon: number;
-  private readonly espacement: number;
-  private readonly losangeRayon: number;
-
-  constructor(largeur : number, hauteur : number, xInitial: number, yInitial: number, xCible: number, yCible: number, indice : Indices) {
-    const rayon = largeur / 2; 
-    const espacement = 2 * rayon * Math.cos(Math.PI / 8);
-
-    // Positionnement sur une grille carrée simple
-    const vraiX = indice.colonne * espacement;
-    const vraiY = indice.ligne * espacement;
-    
-    super(largeur, hauteur, vraiX, vraiY, xCible, yCible, indice);
-    this.rayon = rayon;
-    this.espacement = espacement;
-    
-    // La demi-diagonale du losange (pour combler parfaitement l'interstice géométrique)
-    this.losangeRayon = Math.SQRT2 * rayon * Math.sin(Math.PI / 8);
-  }
-
-  public calculerProgression(ctx : CanvasRenderingContext2D, ScrollActuelle: number, tempsEcoule: number): void {
-    const easeOut = 1 - Math.pow(1 - tempsEcoule, 3);
-
-    // 1. Calcul d'animation standard pour l'octogone
-    const startX = this.xInitial + (ScrollActuelle * this.facteurAleatoire);
-    const startY = this.yInitial + (ScrollActuelle * this.facteurAleatoire);
-    const x = startX + (this.xCible - startX) * easeOut;
-    const y = startY + (this.yCible - startY) * easeOut;
-    
-    // 2. Calcul d'animation spécifique pour le losange (interstice)
-    const facteurLosange = this.facteurAleatoire * 2.5; // Se déplace beaucoup plus vite lors du scroll
-    // On ajoute le décalage du pavage dès le point de départ
-    const startXLosange = this.xInitial + (this.espacement / 2) + (ScrollActuelle * facteurLosange);
-    const startYLosange = this.yInitial + (this.espacement / 2) + (ScrollActuelle * facteurLosange);
-    // Le losange converge ainsi exactement vers la cible (xCible, yCible)
-    const xl = startXLosange + (this.xCible - startXLosange) * easeOut;
-    const yl = startYLosange + (this.yCible - startYLosange) * easeOut;
-    const angleLosange = (1 - easeOut) * Math.PI * 2; // Fait un tour complet (360°) en arrivant
-    
-    this.dessiner(ctx, x, y); 
-    this.dessinerLosange(ctx, xl, yl, angleLosange);
-  }
-  
-  protected dessiner (ctx : CanvasRenderingContext2D, x: number, y: number): void {
-    const angleOffset = Math.PI / 8;
-    
-    // 1. Tracer l'octogone
-    ctx.beginPath();
-    for (let i = 0; i < 8; i++) {
-      const angle = (i * Math.PI / 4) + angleOffset;
-      const xOffset = this.rayon * Math.cos(angle);
-      const yOffset = this.rayon * Math.sin(angle);
-      if (i === 0) {
-        ctx.moveTo(x + xOffset, y + yOffset);
-      } else {
-        ctx.lineTo(x + xOffset, y + yOffset);
-      }
-    }
-    ctx.closePath(); 
-
-    ctx.fillStyle = this.ligneImpaire ? "#3498db" : "#2ecc71"; // supprimer après test
-    ctx.fill(); 
-    ctx.strokeStyle = this.colonneImpaire ? "#2980b9" : "#27ae60"; // supprimer après test
-    ctx.stroke(); 
-  } 
-
-  private dessinerLosange(ctx: CanvasRenderingContext2D, cx: number, cy: number, angle: number): void {
-    ctx.save();
-    ctx.translate(cx, cy); // Déplace directement le contexte au centre interpolé du losange
-    ctx.rotate(angle);     // Applique la rotation calculée
+    // Calcul de la luminosité selon l'orientation de la face (éclairage venant de l'utilisateur)
+    // Produit des cosinus : maximum quand la face est orientée vers l'utilisateur (x ≈ 0, y ≈ 0)
+    // Effet de lumière plus subtil : l'écart de luminosité est réduit
+    const lMin = couleur.l * 0.7; // 70% de la luminosité de base
+    const lMax = couleur.l;
+    const cosAngle = Math.cos(rotation.x) * Math.cos(rotation.y);
+    // Clamp pour éviter les valeurs négatives (face cachée très sombre)
+    const luminosite = lMin + (lMax - lMin) * Math.max(0, cosAngle);
 
     ctx.beginPath();
-    ctx.moveTo(0, -this.losangeRayon);
-    ctx.lineTo(this.losangeRayon, 0);
-    ctx.lineTo(0, this.losangeRayon);
-    ctx.lineTo(-this.losangeRayon, 0);
+    /*ctx.moveTo(x , y-this.hauteur/2*this.symetrieAxiale*Math.cos(rotation.x)); // Point de départ du triangle
+    ctx.lineTo(x-this.largeur/2*this.symetrieAxiale, y+this.hauteur/2*this.symetrieAxiale*Math.cos(rotation.x)); // Point gauche du triangle     
+    ctx.lineTo(x+this.largeur/2*this.symetrieAxiale, y+this.hauteur/2*this.symetrieAxiale*Math.cos(rotation.x)); // Point droit du triangle
+    */
+
+    // face avant
+    /*
+    ctx.moveTo(x , y-this.hauteur/2*this.symetrieAxiale*Math.cos(rotation.x)); // Point de départ du triangle
+    ctx.lineTo(x-this.largeur/2*this.symetrieAxiale, y+this.hauteur/2*this.symetrieAxiale*Math.cos(rotation.x)); // Point gauche du triangle     
+    ctx.lineTo(x+this.largeur/2*this.symetrieAxiale, y+this.hauteur/2*this.symetrieAxiale*Math.cos(rotation.x)); 
+    
+    ctx.moveTo(x , y-this.hauteur/2*this.symetrieAxiale*Math.cos(rotation.x)); // Point de départ du triangle
+    ctx.lineTo(x, y+this.hauteur/2*this.symetrieAxiale*Math.cos(rotation.x)-this.hauteur/2*this.symetrieAxiale*Math.sin(rotation.x)); // Point gauche du triangle     
+    ctx.lineTo(x-this.largeur/2*this.symetrieAxiale, y+this.hauteur/2*this.symetrieAxiale*Math.cos(rotation.x));  
+
+    ctx.moveTo(x , y-this.hauteur/2*this.symetrieAxiale*Math.cos(rotation.x));
+    ctx.lineTo(x, y+this.hauteur/2*this.symetrieAxiale*Math.cos(rotation.x)-this.hauteur/2*this.symetrieAxiale*Math.sin(rotation.x)); // Point gauche du triangle     
+    ctx.lineTo(x+this.largeur/2*this.symetrieAxiale, y+this.hauteur/2*this.symetrieAxiale*Math.cos(rotation.x));
+
+    ctx.moveTo(x , y-this.hauteur/2*this.symetrieAxiale*Math.cos(rotation.x)); // Point de départ du triangle
+    ctx.lineTo(x, y-this.hauteur/2*this.symetrieAxiale*Math.cos(rotation.x)+this.hauteur/2*this.symetrieAxiale*Math.sin(rotation.x)); // Point gauche du triangle     
+    ctx.lineTo(x-this.largeur/2*this.symetrieAxiale, y+this.hauteur/2*this.symetrieAxiale*Math.cos(rotation.x));  
+
+    ctx.moveTo(x , y-this.hauteur/2*this.symetrieAxiale*Math.cos(rotation.x));
+    ctx.lineTo(x, y-this.hauteur/2*this.symetrieAxiale*Math.cos(rotation.x)+this.hauteur/2*this.symetrieAxiale*Math.sin(rotation.x)); // Point gauche du triangle     
+    ctx.lineTo(x+this.largeur/2*this.symetrieAxiale, y+this.hauteur/2*this.symetrieAxiale*Math.cos(rotation.x));
+    */
+
+    
+    ctx.moveTo(point2DSommet.x , point2DSommet.y); // Point de départ du triangle
+    ctx.lineTo(point2DBaseDevantGauche.x, point2DBaseDevantGauche.y); // Point gauche du triangle
+    ctx.lineTo(point2DBaseDevantDroite.x, point2DBaseDevantDroite.y); // Point droit du triangle
+    ctx.lineTo(point2DSommet.x , point2DSommet.y); // Point de départ du triangle
+    ctx.lineTo(point2DBaseDerriereGauche.x, point2DBaseDerriereGauche.y); // Point gauche du triangle
+    ctx.lineTo(point2DBaseDerriereDroite.x, point2DBaseDerriereDroite.y); // Point droit du triangle
+    ctx.lineTo(point2DSommet.x , point2DSommet.y);
+    ctx.moveTo(point2DBaseDevantGauche.x, point2DBaseDevantGauche.y); // Point de départ du triangle
+    ctx.lineTo(point2DBaseDerriereGauche.x, point2DBaseDerriereGauche.y);
+    ctx.moveTo(point2DBaseDevantDroite.x, point2DBaseDevantDroite.y); // Point de départ du triangle
+    ctx.lineTo(point2DBaseDerriereDroite.x, point2DBaseDerriereDroite.y);
+
+
+    ctx.fillStyle = `hsl(${couleur.h}, ${couleur.s}%, ${luminosite}%)`;
+    ctx.strokeStyle = `white`;
+    ctx.fill();
+    ctx.stroke();
     ctx.closePath();
+  }
 
-    // Inverser les couleurs pour le losange pour le différencier des octogones
-    ctx.fillStyle = this.ligneImpaire ? "#2ecc71" : "#3498db"; 
-    ctx.fill(); 
-    ctx.strokeStyle = this.ligneImpaire ? "#27ae60" : "#2980b9"; 
-    ctx.stroke(); 
+  }
 
-    ctx.restore(); // Restaure le contexte pour ne pas affecter les autres figures
-  } 
-}

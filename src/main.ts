@@ -1,5 +1,6 @@
 import './style.css';
 import { Scene } from './canvas';
+import { Lettres } from './lettres';
 
 // Importation des constantes depuis import.meta.env (Vite)
 const TAILLE_GRILLE_VP: number = Number(import.meta.env.VITE_TAILLE_GRILLE_VP);
@@ -17,16 +18,18 @@ const TAUX_FIGURES_TRANSPARENTS: number = Number(import.meta.env.VITE_TAUX_FIGUR
 const TAUX_REDUCTION_FIGURES_ANIMATION: number = Number(import.meta.env.VITE_TAUX_REDUCTION_FIGURES_ANIMATION);
 const TAUX_FIGURES_DISPARITION: number = Number(import.meta.env.VITE_TAUX_FIGURES_DISPARITION);
 const LIGNE_FIN_ANIMATION: number = Number(import.meta.env.VITE_LIGNE_FIN_ANIMATION);
-export const COULEUR_FILL_FIGURES: string = import.meta.env.VITE_COULEUR_FIGURES || "#3498db";
-export const COULEUR_STROKE_FIGURES: string = import.meta.env.VITE_COULEUR_BORD_FIGURES || "#2980b9";
-export const COULEUR_FINAL_FILL_FIGURES: string = import.meta.env.VITE_COULEUR_FINAL_FIGURES || "#2ecc71";
-export const COULEUR_FINAL_STROKE_FIGURES: string = import.meta.env.VITE_COULEUR_FINAL_BORD_FIGURES || "#27ae60";
 
 
 
-// Canvas principal et contexte 2D: tout le dessin passe par cet objet ctx.
-const canvas = document.getElementById("scene") as HTMLCanvasElement;
-const ctx = canvas.getContext("2d");
 
-const scene = new Scene("scene", 3, 30); // 2eme paramètre(type de figures) 0: losange, 1: triangle, 2: hexagone, 3: octogone
+//Canvas principal et contexte 2D: tout le dessin passe par cet objet ctx.
+//const canvas = document.getElementById("scene") as HTMLCanvasElement;
+//const canvaslettres = document.getElementById("lettres") as HTMLCanvasElement;
+//const ctx = canvas.getContext("2d");
+//const ctxlettres = canvaslettres.getContext("2d");
+const scene = new Scene("scene", 2, 120); // 2eme paramètre(type de figures) 0: losange, 1: triangle, 2 : triangle rectangle, 3: hexagone, 4: octogone
 scene.start();
+
+
+
+//const lettres = new Lettres("lettres", 2, 50); // 0: losange, 1: triangle, 2 : triangle rectangle, 3: hexagone, 4: octogone
